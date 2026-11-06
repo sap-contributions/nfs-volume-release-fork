@@ -73,7 +73,7 @@ func main() {
 
 	orig := flag.Arg(1)
 	loopbackfs := pathfs.NewLoopbackFileSystem(orig)
-	finalFs := mapfs.NewMapFileSystem(uint32(*uid), uint32(*gid), loopbackfs, orig, &syscallshim.SyscallShim{})
+	finalFs := mapfs.NewMapFileSystem(uint32(*uid), uint32(*gid), loopbackfs, orig, &syscallshim.SyscallShim{}, cfg.IDMappedMount)
 
 	opts := &nodefs.Options{
 		NegativeTimeout: time.Second,
@@ -91,6 +91,7 @@ func main() {
 		FsName:         origAbs,
 		Debug:          *debugLogging,
 		SingleThreaded: cfg.SingleThreaded,
+		IDMappedMount:  cfg.IDMappedMount,
 	}
 	state, err := fuse.NewServer(conn.RawFS(), mountPoint, mOpts)
 	if err != nil {
@@ -106,6 +107,7 @@ func main() {
 type config struct {
 	Debug          bool   `yaml:"debug"`
 	SingleThreaded bool   `yaml:"single_threaded"`
+	IDMappedMount  bool   `yaml:"idmapped_mount"`
 	CPUProfile     string `yaml:"cpu_profile"`
 	MemProfile     string `yaml:"mem_profile"`
 	SoftMemLimit   int64  `yaml:"soft_mem_limit"`

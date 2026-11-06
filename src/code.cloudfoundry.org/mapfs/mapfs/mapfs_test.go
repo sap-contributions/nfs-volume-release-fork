@@ -34,7 +34,7 @@ var _ = Describe("mapfs", func() {
 	})
 
 	JustBeforeEach(func() {
-		mapFS = mapfs.NewMapFileSystem(uid, gid, fakeFS, "/tmp", fakeSyscall)
+		mapFS = mapfs.NewMapFileSystem(uid, gid, fakeFS, "/tmp", fakeSyscall, false)
 	})
 
 	Context("when there is a mapfs", func() {

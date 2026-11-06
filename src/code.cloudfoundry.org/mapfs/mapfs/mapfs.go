@@ -25,9 +25,10 @@ type mapFileSystem struct {
 	syscall       syscallshim.Syscall
 	root          string
 	disableXAttrs bool
+	idMappedMount bool
 }
 
-func NewMapFileSystem(uid, gid uint32, fs pathfs.FileSystem, root string, sys syscallshim.Syscall) pathfs.FileSystem {
+func NewMapFileSystem(uid, gid uint32, fs pathfs.FileSystem, root string, sys syscallshim.Syscall, idMappedMount bool) pathfs.FileSystem {
 	// Make sure the Root path is absolute to avoid problems when the
 	// application changes working directory.
 	root, err := filepath.Abs(root)
@@ -42,6 +43,7 @@ func NewMapFileSystem(uid, gid uint32, fs pathfs.FileSystem, root string, sys sy
 		syscall:       sys,
 		root:          root,
 		disableXAttrs: false,
+		idMappedMount: idMappedMount,
 	}
 }
 
@@ -77,7 +79,8 @@ func (fs *mapFileSystem) GetAttr(name string, context *fuse.Context) (a *fuse.At
 
 	a, code = fs.FileSystem.GetAttr(name, context)
 
-	if a != nil {
+	// ID-mapped mounts must not derive file ownership from request caller IDs.
+	if a != nil && !fs.idMappedMount {
 		if a.Uid == fs.uid {
 			a.Uid = context.Uid
 		}
@@ -98,10 +101,10 @@ func (fs *mapFileSystem) Chmod(name string, mode uint32, context *fuse.Context) 
 }
 
 func (fs *mapFileSystem) Chown(name string, uid uint32, gid uint32, context *fuse.Context) (code fuse.Status) {
-	if uid == context.Uid {
+	if !fs.idMappedMount && uid == context.Uid {
 		uid = uint32(fs.uid)
 	}
-	if gid == context.Gid {
+	if !fs.idMappedMount && gid == context.Gid {
 		gid = uint32(fs.gid)
 	}
 	_, _, err := fs.setEffectiveIDs(int(fs.uid), int(fs.gid))
